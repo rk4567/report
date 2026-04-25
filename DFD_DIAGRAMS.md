@@ -1,343 +1,640 @@
-# TaskBit - Data Flow Diagrams (DFD)
+# Data Flow Diagrams (DFDs) - TaskBit Project
 
-## Overview
-
-This document contains Data Flow Diagrams for the TaskBit Project Management System at three levels of abstraction:
-- **Level 0 (Context):** High-level overview of system boundaries
-- **Level 1 (Functional):** Main processes and data flows
-- **Level 2 (Detailed):** Deep dive into GitHub integration workflow
-
----
-
-## DFD Level 0: Context Diagram
-
-The context diagram shows the TaskBit system as a single entity interacting with external systems and users.
+## DFD Level 0 (Context Diagram)
 
 ```mermaid
 graph TB
-    subgraph "DFD Level 0: Context Diagram"
-        User["👤 Users<br/>(Project Managers,<br/>Team Members)"]
-        GitHub["🐙 GitHub<br/>API"]
-        EmailService["📧 Email<br/>Service"]
-        
-        TaskBit["<b>TaskBit System</b><br/>Project Management<br/>& Task Tracking"]
-        
-        User -->|Login, Create Projects,<br/>Manage Tasks| TaskBit
-        TaskBit -->|Task Notifications,<br/>Invitations| User
-        
-        TaskBit -->|OAuth, Webhook Events,<br/>Issue Sync| GitHub
-        GitHub -->|Issue Data,<br/>OAuth Tokens| TaskBit
-        
-        TaskBit -->|Send Emails| EmailService
-        EmailService -->|Delivery Status| TaskBit
-    end
+    User["👤 User"]
+    TaskBit["📊 TaskBit System"]
+    GitHub["🐙 GitHub"]
+    Clerk["🔐 Clerk Auth"]
+    Email["📧 Email Service"]
     
-    style TaskBit fill:#61dafb,stroke:#333,stroke-width:3px
-    style User fill:#90c53f,color:#fff
-    style GitHub fill:#333,color:#fff
-    style EmailService fill:#f59e0b,color:#000
+    User -->|Login/Register| Clerk
+    Clerk -->|Auth Token| User
+    User -->|Manage Projects & Tasks| TaskBit
+    TaskBit -->|Display Data| User
+    TaskBit -->|Integrate| GitHub
+    GitHub -->|Webhook Events| TaskBit
+    TaskBit -->|Send Notifications| Email
+    Email -->|Emails| User
 ```
-
-### Level 0 Description
-
-**External Entities:**
-- **👤 Users:** Project managers and team members who interact with the system
-- **🐙 GitHub:** External GitHub API for OAuth and webhook integration
-- **📧 Email Service:** External mail service for sending notifications
-
-**Data Flows:**
-1. Users login, create/manage projects and tasks
-2. TaskBit sends task notifications and invitations back to users
-3. GitHub OAuth for authentication and webhook events for issue synchronization
-4. Email service handles notification delivery with status feedback
 
 ---
 
-## DFD Level 1: Main Functional Modules
-
-This level breaks down the TaskBit system into its core processes and data stores.
+## DFD Level 1 (Main Processes & Data Stores)
 
 ```mermaid
 graph TB
-    subgraph "DFD Level 1: Main Functional Modules"
-        subgraph "External Entities"
-            User["👤 Users"]
-            GitHub["🐙 GitHub"]
-            Email["📧 Email"]
-        end
-        
-        subgraph "Core Processes"
-            Auth["1. Authentication<br/>(Clerk OAuth)"]
-            WS["2. Workspace<br/>Management"]
-            Proj["3. Project<br/>Management"]
-            Task["4. Task<br/>Management"]
-            GH["5. GitHub<br/>Integration"]
-            Notif["6. Notifications<br/>(Inngest)"]
-            Comments["7. Comments &<br/>Collaboration"]
-        end
-        
-        subgraph "Data Stores"
-            DB["🗄️ PostgreSQL<br/>Database"]
-            Cache["⚡ Cache<br/>(Task States)"]
-            Queue["📋 Job Queue<br/>(Inngest)"]
-        end
-        
-        subgraph "Real-time"
-            WS_Server["🔌 WebSocket<br/>Server"]
-        end
-        
-        User -->|Credentials| Auth
-        Auth -->|User ID, Token| User
-        Auth -->|Verify User| DB
-        
-        User -->|Create/View<br/>Workspaces| WS
-        WS -->|Workspace Data| User
-        WS -->|Read/Write| DB
-        
-        User -->|Manage<br/>Projects| Proj
-        Proj -->|Project Data| User
-        Proj -->|Read/Write| DB
-        Proj -->|Trigger| Notif
-        
-        User -->|Create/Update<br/>Tasks| Task
-        Task -->|Task Data| User
-        Task -->|Read/Write| DB
-        Task -->|Store State| Cache
-        Task -->|Broadcast| WS_Server
-        Task -->|Trigger Events| Notif
-        Task -->|Link Issues| GH
-        
-        User -->|Add Comments| Comments
-        Comments -->|Comment Data| User
-        Comments -->|Read/Write| DB
-        Comments -->|Broadcast| WS_Server
-        
-        GH -->|OAuth Callback| Auth
-        GitHub -->|Issue Events| GH
-        GH -->|Update Issues| GitHub
-        GH -->|Read/Write| DB
-        GH -->|Trigger Sync| Notif
-        
-        Notif -->|Send Task<br/>Assignment| Email
-        Notif -->|Queue Tasks| Queue
-        Email -->|Delivery ACK| Notif
-        
-        WS_Server -->|Real-time<br/>Updates| User
-        
+    User["👤 User"]
+    
+    subgraph Processes["🔄 Main Processes"]
+        Auth["1.0 User Authentication"]
+        WS["2.0 Workspace Management"]
+        PROJ["3.0 Project Management"]
+        TASK["4.0 Task Management"]
+        CMT["5.0 Comment Management"]
+        GH["6.0 GitHub Integration"]
     end
     
-    style Auth fill:#1f3a93,color:#fff
-    style WS fill:#3b82f6,color:#fff
-    style Proj fill:#0891b2,color:#fff
-    style Task fill:#059669,color:#fff
-    style GH fill:#333,color:#fff
-    style Notif fill:#f59e0b,color:#000
-    style Comments fill:#8b5cf6,color:#fff
-    style DB fill:#ef4444,color:#fff
-    style Queue fill:#f59e0b,color:#000
-    style WS_Server fill:#10b981,color:#fff
+    subgraph DataStores["💾 Data Stores"]
+        DB1["D1: Users"]
+        DB2["D2: Workspaces"]
+        DB3["D3: Projects"]
+        DB4["D4: Tasks"]
+        DB5["D5: Comments"]
+        DB6["D6: GitHub Integration"]
+    end
+    
+    subgraph External["🔌 External Systems"]
+        Clerk["Clerk Auth"]
+        GitHub["GitHub API"]
+        Inngest["Inngest Events"]
+        Email["Email Service"]
+    end
+    
+    User -->|Login| Auth
+    Auth -->|Verify| Clerk
+    Auth -->|Store/Retrieve| DB1
+    
+    User -->|Create/Update| WS
+    WS -->|Manage Members| DB2
+    WS -->|Access Projects| PROJ
+    
+    PROJ -->|Store/Retrieve| DB3
+    PROJ -->|Create Tasks| TASK
+    PROJ -->|GitHub Sync| GH
+    
+    TASK -->|Store/Retrieve| DB4
+    TASK -->|Add Comments| CMT
+    TASK -->|Sync with GitHub| GH
+    
+    CMT -->|Store/Retrieve| DB5
+    CMT -->|Notify| User
+    
+    GH -->|OAuth| GitHub
+    GH -->|Store Config| DB6
+    GitHub -->|Webhooks| GH
+    
+    Auth -->|Trigger Events| Inngest
+    PROJ -->|Trigger Events| Inngest
+    TASK -->|Trigger Events| Inngest
+    Inngest -->|Send Notifications| Email
 ```
-
-### Level 1 Process Descriptions
-
-| Process | Description | Input | Output |
-|---------|-------------|-------|--------|
-| **1. Authentication** | Handles user login via Clerk OAuth, token verification | User credentials | JWT token, user ID |
-| **2. Workspace Management** | Create and manage organizational workspaces | User actions, workspace data | Workspace entities, member lists |
-| **3. Project Management** | Create projects, assign team leads, set status | Project metadata | Project details, team assignments |
-| **4. Task Management** | Create tasks, assign to users, track status | Task data, status updates | Task entities, real-time updates |
-| **5. GitHub Integration** | OAuth flow, webhook handling, issue sync | GitHub events, OAuth tokens | Issue data, task mappings |
-| **6. Notifications** | Background job processing, email triggers | Events from other processes | Notification emails, alert status |
-| **7. Comments & Collaboration** | Handle task discussions and threaded comments | Comment data | Comment entities, real-time updates |
-
-### Level 1 Data Stores
-
-| Data Store | Purpose | Contents |
-|-----------|---------|----------|
-| **PostgreSQL Database** | Primary data persistence | Users, workspaces, projects, tasks, comments, GitHub integrations |
-| **Cache** | Fast access to frequently used data | Task states, project progress, user preferences |
-| **Job Queue (Inngest)** | Background job management | Pending notifications, email tasks, sync operations |
 
 ---
 
-## DFD Level 2: GitHub Integration Detailed Flow
-
-This level provides a detailed breakdown of the complex GitHub integration process, including OAuth flow, webhook handling, and task synchronization.
+## DFD Level 2 - User Authentication & Profile (Process 1.0)
 
 ```mermaid
 graph TB
-    subgraph "DFD Level 2: GitHub Integration Detailed Flow"
-        subgraph "User & Client"
-            User["👤 User"]
-            Browser["🌐 Browser<br/>(TaskBit UI)"]
-        end
-        
-        subgraph "Frontend Layer"
-            OAuth_Init["2.1 OAuth<br/>Initiator"]
-            WebhookMonitor["2.2 Webhook<br/>Monitor"]
-            RepoSelector["2.3 Repository<br/>Selector"]
-        end
-        
-        subgraph "Backend API Layer"
-            AuthHandler["2.4 Auth Flow<br/>Handler"]
-            CallbackHandler["2.5 Callback<br/>Handler"]
-            WebhookReceiver["2.6 Webhook<br/>Receiver"]
-            TokenManager["2.7 Token<br/>Manager"]
-        end
-        
-        subgraph "Data & External"
-            GitHub["🐙 GitHub<br/>OAuth Server"]
-            GitHubAPI["🐙 GitHub<br/>API"]
-            DB["🗄️ Database<br/>(Integration Table)"]
-            Queue["📋 Job Queue"]
-        end
-        
-        subgraph "Post-Integration"
-            TaskSync["2.8 Task<br/>Sync Engine"]
-            NotifEngine["2.9 Notification<br/>Engine"]
-        end
-        
-        User -->|Click Connect| OAuth_Init
-        OAuth_Init -->|Generate OAuth URL| Browser
-        Browser -->|Redirect to GitHub| GitHub
-        
-        GitHub -->|Authorization Request| User
-        User -->|Grant Permission| GitHub
-        
-        GitHub -->|Authorization Code| AuthHandler
-        AuthHandler -->|Exchange Code| GitHub
-        
-        GitHub -->|Access Token| CallbackHandler
-        CallbackHandler -->|Verify Token| TokenManager
-        TokenManager -->|Store Encrypted| DB
-        
-        TokenManager -->|Return Repos| RepoSelector
-        RepoSelector -->|Display List| Browser
-        Browser -->|Select Repository| User
-        User -->|Confirm| RepoSelector
-        
-        RepoSelector -->|Create Webhook| WebhookReceiver
-        WebhookReceiver -->|POST to GitHub| GitHubAPI
-        GitHubAPI -->|Webhook Created| DB
-        
-        GitHub -->|Issue Event<br/>X-Hub-Signature| WebhookReceiver
-        WebhookReceiver -->|Verify Signature| TokenManager
-        TokenManager -->|Signature Valid| WebhookReceiver
-        
-        WebhookReceiver -->|Parse Event| TaskSync
-        TaskSync -->|Map Issue State| DB
-        TaskSync -->|Issue #45 Closed<br/>→ Task DONE| Queue
-        
-        Queue -->|Send Email<br/>Notifications| NotifEngine
-        NotifEngine -->|Broadcast Update| Browser
-        
+    User["👤 User"]
+    
+    subgraph AuthProcess["1.0 User Authentication & Profile"]
+        Login["1.1 Login/Register"]
+        SignUp["1.2 User Signup"]
+        Profile["1.3 Profile Setup"]
+        Validate["1.4 Validate Credentials"]
     end
     
-    style OAuth_Init fill:#3b82f6,color:#fff
-    style CallbackHandler fill:#3b82f6,color:#fff
-    style WebhookReceiver fill:#0891b2,color:#fff
-    style AuthHandler fill:#1f3a93,color:#fff
-    style TokenManager fill:#059669,color:#fff
-    style TaskSync fill:#f59e0b,color:#000
-    style NotifEngine fill:#f59e0b,color:#000
-    style GitHub fill:#333,color:#fff
-    style GitHubAPI fill:#333,color:#fff
-    style DB fill:#ef4444,color:#fff
-    style Queue fill:#f59e0b,color:#000
+    subgraph Stores["💾 Data Stores"]
+        UserDB["D1: Users"]
+        MetadataDB["D1.1: User Metadata"]
+    end
+    
+    Clerk["🔐 Clerk Auth Service"]
+    
+    User -->|Credentials| Login
+    Login -->|Verify| Validate
+    Validate -->|Query| UserDB
+    Validate -->|Token| Clerk
+    Clerk -->|Authenticated| Login
+    
+    User -->|Email/Password| SignUp
+    SignUp -->|Create Account| UserDB
+    SignUp -->|Request Profile| Profile
+    
+    User -->|Profile Info| Profile
+    Profile -->|Designation, Department, About| MetadataDB
+    Profile -->|Sync| Clerk
+    
+    Login -->|Session| User
+    UserDB -->|User Data| Profile
 ```
 
-### Level 2 Process Details
+---
 
-#### Phase 1: OAuth Authorization
-- **2.1 OAuth Initiator:** User clicks "Connect GitHub" button
-- **2.4 Auth Flow Handler:** Generates OAuth URL with state token for CSRF protection
-- **GitHub OAuth Server:** User authenticates and grants permissions
+## DFD Level 2 - Workspace Management (Process 2.0)
 
-#### Phase 2: Token Exchange & Storage
-- **2.5 Callback Handler:** Receives authorization code from GitHub
-- **2.7 Token Manager:** Exchanges code for access token
-- **Database:** Stores encrypted access token for future API calls
-
-#### Phase 3: Repository Selection
-- **2.3 Repository Selector:** Fetches user's repositories from GitHub API
-- **Browser:** Displays repository list for user selection
-- **Webhook Creation:** Sets up webhook for selected repository
-
-#### Phase 4: Webhook Event Processing
-- **2.6 Webhook Receiver:** Receives GitHub issue events (opened, closed, edited)
-- **Token Manager:** Verifies HMAC-SHA256 signature for security
-- **2.8 Task Sync Engine:** Maps GitHub issue states to TaskBit task statuses
-  - GitHub `closed` → TaskBit `DONE`
-  - GitHub `open` → TaskBit `IN_PROGRESS`
-
-#### Phase 5: Notification
-- **Job Queue:** Queues notification tasks
-- **2.9 Notification Engine:** Sends email notifications and broadcasts real-time updates
-
-### Level 2 Data Flow Summary
-
-| Flow | From | To | Data |
-|------|------|----|----|
-| OAuth Request | User | GitHub | Authorization scope |
-| OAuth Response | GitHub | Backend | Authorization code |
-| Token Exchange | Backend | GitHub | Code + Client Secret |
-| Access Token | GitHub | Backend | JWT Token |
-| Repository List | GitHub API | Frontend | Repo names, URLs |
-| Webhook Event | GitHub | Backend | Issue event payload |
-| Signature | GitHub | Backend | X-Hub-Signature-256 header |
-| Task Update | Backend | Database | Issue state mapping |
-| Notification | Backend | Email | Task assignment alert |
+```mermaid
+graph TB
+    User["👤 User"]
+    
+    subgraph WorkspaceProcess["2.0 Workspace Management"]
+        Create["2.1 Create Workspace"]
+        List["2.2 List Workspaces"]
+        Update["2.3 Update Workspace"]
+        Member["2.4 Manage Members"]
+    end
+    
+    subgraph Stores["💾 Data Stores"]
+        WS_DB["D2: Workspaces"]
+        WSM_DB["D2.1: Workspace Members"]
+        UserDB["D1: Users"]
+    end
+    
+    Email["📧 Email Service"]
+    
+    User -->|Create| Create
+    Create -->|Validate Owner| UserDB
+    Create -->|Store| WS_DB
+    
+    User -->|Get| List
+    List -->|Query All| WS_DB
+    List -->|Display| User
+    
+    User -->|Update Info| Update
+    Update -->|Modify| WS_DB
+    Update -->|Return| User
+    
+    User -->|Add/Remove| Member
+    Member -->|Update| WSM_DB
+    Member -->|Query| UserDB
+    Member -->|Invite| Email
+    Member -->|Notify| User
+    
+    WS_DB -->|Workspace Data| List
+    WS_DB -->|Workspace Data| Update
+    WSM_DB -->|Member List| Member
+```
 
 ---
 
-## Key Features & Data Flows
+## DFD Level 2 - Project Management (Process 3.0)
 
-### Real-time Updates
-- WebSocket connection maintains live sync between clients
-- Task updates broadcast to all connected users in project
-- Comments appear instantly without page refresh
-
-### Event-Driven Architecture
-- Task updates trigger Inngest events
-- Events queued for background processing
-- Email notifications sent asynchronously
-- GitHub integration synced through webhooks
-
-### Multi-Tenant Isolation
-- Workspace-level data isolation
-- User access verified before database queries
-- Role-based permission checks
-- Cross-workspace data access prevented
+```mermaid
+graph TB
+    User["👤 User"]
+    
+    subgraph ProjectProcess["3.0 Project Management"]
+        Create["3.1 Create Project"]
+        List["3.2 List Projects"]
+        Update["3.3 Update Project"]
+        Members["3.4 Manage Members"]
+        Analytics["3.5 Project Analytics"]
+    end
+    
+    subgraph Stores["💾 Data Stores"]
+        Proj_DB["D3: Projects"]
+        ProjMem_DB["D3.1: Project Members"]
+        Task_DB["D4: Tasks"]
+        UserDB["D1: Users"]
+    end
+    
+    Workspace["2.0 Workspace Management"]
+    TaskMgmt["4.0 Task Management"]
+    
+    User -->|Create| Create
+    Create -->|Validate Workspace| Workspace
+    Create -->|Store| Proj_DB
+    
+    User -->|Get| List
+    List -->|Query by Workspace| Proj_DB
+    List -->|Display| User
+    
+    User -->|Update| Update
+    Update -->|Modify| Proj_DB
+    Update -->|Return| User
+    
+    User -->|Add/Remove| Members
+    Members -->|Update| ProjMem_DB
+    Members -->|Query| UserDB
+    Members -->|Notify| User
+    
+    User -->|View Analytics| Analytics
+    Analytics -->|Query Tasks| Task_DB
+    Analytics -->|Calculate Stats| Analytics
+    Analytics -->|Display| User
+    
+    Proj_DB -->|Project Data| List
+    Proj_DB -->|Task Count| Analytics
+    Task_DB -->|Task Data| Analytics
+```
 
 ---
 
-## Technology Stack Integration
+## DFD Level 2 - Task Management (Process 4.0)
 
-| Layer | Technology | DFD Reference |
-|-------|-----------|---|
-| Frontend | React 19 + Vite | Browser, OAuth Initiator |
-| Real-time | WebSocket (ws 8.20) | WebSocket Server |
-| API | Express.js 5.1 | Backend handlers |
-| Database | PostgreSQL (Neon) | Database store |
-| ORM | Prisma 6.17 | Data access layer |
-| Auth | Clerk OAuth | Authentication process |
-| Background Jobs | Inngest | Job Queue, Notification Engine |
-| External APIs | GitHub API | GitHub integration |
-| Email | Nodemailer | Email Service |
+```mermaid
+graph TB
+    User["👤 User"]
+    
+    subgraph TaskProcess["4.0 Task Management"]
+        Create["4.1 Create Task"]
+        List["4.2 List Tasks"]
+        Update["4.3 Update Task"]
+        Assign["4.4 Assign Task"]
+        Filter["4.5 Filter & Sort"]
+    end
+    
+    subgraph Stores["💾 Data Stores"]
+        Task_DB["D4: Tasks"]
+        UserDB["D1: Users"]
+        Proj_DB["D3: Projects"]
+    end
+    
+    ProjectMgmt["3.0 Project Management"]
+    CommentMgmt["5.0 Comment Management"]
+    GitHub["6.0 GitHub Integration"]
+    Inngest["⚡ Inngest Events"]
+    
+    User -->|Create| Create
+    Create -->|Validate| ProjectMgmt
+    Create -->|Check Assignee| UserDB
+    Create -->|Store| Task_DB
+    Create -->|Trigger Event| Inngest
+    
+    User -->|Get| List
+    List -->|Query| Task_DB
+    List -->|Display| User
+    
+    User -->|Update Status/Details| Update
+    Update -->|Modify| Task_DB
+    Update -->|Trigger Event| Inngest
+    Update -->|Sync| GitHub
+    Update -->|Return| User
+    
+    User -->|Assign| Assign
+    Assign -->|Verify User| UserDB
+    Assign -->|Update| Task_DB
+    Assign -->|Notify Assignee| User
+    
+    User -->|Filter| Filter
+    Filter -->|Query with Criteria| Task_DB
+    Filter -->|Display| User
+    
+    Task_DB -->|Task Data| List
+    Task_DB -->|Task Data| CommentMgmt
+    Task_DB -->|GitHub Issue Link| GitHub
+```
 
 ---
 
-## Security Considerations
+## DFD Level 2 - Comment Management (Process 5.0)
 
-1. **OAuth Security:** State token CSRF protection, secure code exchange
-2. **Webhook Verification:** HMAC-SHA256 signature verification
-3. **Token Management:** Encrypted storage of GitHub access tokens
-4. **Data Isolation:** Multi-tenant workspace boundaries enforced
-5. **Access Control:** Role-based permission checks at each process
+```mermaid
+graph TB
+    User["👤 User"]
+    
+    subgraph CommentProcess["5.0 Comment Management"]
+        Create["5.1 Create Comment"]
+        List["5.2 List Comments"]
+        Delete["5.3 Delete Comment"]
+        Notify["5.4 Notify Users"]
+    end
+    
+    subgraph Stores["💾 Data Stores"]
+        Comment_DB["D5: Comments"]
+        Task_DB["D4: Tasks"]
+        UserDB["D1: Users"]
+    end
+    
+    TaskMgmt["4.0 Task Management"]
+    Email["📧 Email Service"]
+    Inngest["⚡ Inngest Events"]
+    
+    User -->|Add Comment| Create
+    Create -->|Validate Task| Task_DB
+    Create -->|Verify User| UserDB
+    Create -->|Store| Comment_DB
+    Create -->|Trigger Event| Inngest
+    
+    User -->|Get Comments| List
+    List -->|Query by Task| Comment_DB
+    List -->|Get User Info| UserDB
+    List -->|Display| User
+    
+    User -->|Delete| Delete
+    Delete -->|Verify Ownership| Comment_DB
+    Delete -->|Remove| Comment_DB
+    Delete -->|Trigger Event| Inngest
+    
+    Inngest -->|Comment Event| Notify
+    Notify -->|Get Task Assignee| Task_DB
+    Notify -->|Get User Email| UserDB
+    Notify -->|Send| Email
+    Notify -->|Update| User
+    
+    Comment_DB -->|Comment List| List
+    Task_DB -->|Task Info| Create
+```
 
 ---
 
-**Document Generated:** April 25, 2026  
-**System:** TaskBit Project Management Platform  
-**Version:** 1.0
+## DFD Level 2 - GitHub Integration (Process 6.0)
 
+```mermaid
+graph TB
+    User["👤 User"]
+    
+    subgraph GitHubProcess["6.0 GitHub Integration"]
+        OAuth["6.1 OAuth Authentication"]
+        Connect["6.2 Connect Repository"]
+        Sync["6.3 Sync Issues"]
+        Webhook["6.4 Handle Webhook"]
+        CreateIssue["6.5 Create Issue"]
+    end
+    
+    subgraph Stores["💾 Data Stores"]
+        GitHub_DB["D6: GitHub Integration"]
+        Task_DB["D4: Tasks"]
+        Proj_DB["D3: Projects"]
+        OAuth_DB["D6.1: OAuth States"]
+    end
+    
+    GitHub["🐙 GitHub API"]
+    TaskMgmt["4.0 Task Management"]
+    
+    User -->|Start OAuth| OAuth
+    OAuth -->|Generate State| OAuth_DB
+    OAuth -->|Redirect| GitHub
+    GitHub -->|Code| OAuth
+    OAuth -->|Exchange Token| GitHub
+    GitHub -->|Access Token| OAuth
+    OAuth -->|Store Config| GitHub_DB
+    
+    User -->|Select Repo| Connect
+    Connect -->|Query| GitHub
+    GitHub -->|Repo Data| Connect
+    Connect -->|Store| GitHub_DB
+    Connect -->|Return| User
+    
+    User -->|Sync Issues| Sync
+    Sync -->|Query| GitHub
+    GitHub -->|Issues List| Sync
+    Sync -->|Create/Update Tasks| Task_DB
+    Sync -->|Return Status| User
+    
+    GitHub -->|Push Event| Webhook
+    Webhook -->|Verify Secret| GitHub_DB
+    Webhook -->|Parse Event| Webhook
+    Webhook -->|Update Task| Task_DB
+    Webhook -->|Update Task Status| TaskMgmt
+    
+    User -->|Create on GitHub| CreateIssue
+    CreateIssue -->|Query Task| Task_DB
+    CreateIssue -->|Create Issue| GitHub
+    GitHub -->|Issue URL| CreateIssue
+    CreateIssue -->|Store URL| Task_DB
+    CreateIssue -->|Return| User
+    
+    GitHub_DB -->|Auth Token| Sync
+    GitHub_DB -->|Auth Token| CreateIssue
+```
+
+---
+
+## DFD Level 3 - Create Task (Detailed - Process 4.1)
+
+```mermaid
+graph TB
+    User["👤 User"]
+    
+    subgraph CreateTaskDetailed["4.1 Create Task - Detailed Flow"]
+        Validate["4.1.1 Validate Input"]
+        CheckProject["4.1.2 Check Project Access"]
+        CheckAssignee["4.1.3 Verify Assignee"]
+        GenerateID["4.1.4 Generate Task ID"]
+        Store["4.1.5 Store in DB"]
+        TriggerEvent["4.1.6 Trigger Event"]
+        Response["4.1.7 Send Response"]
+    end
+    
+    subgraph DataAccess["💾 Data Access"]
+        Proj_DB["D3: Projects"]
+        ProjMem_DB["D3.1: Project Members"]
+        Task_DB["D4: Tasks"]
+        UserDB["D1: Users"]
+    end
+    
+    Inngest["⚡ Inngest Events"]
+    GitHub["6.0 GitHub Integration"]
+    
+    User -->|Title, Description, etc| Validate
+    Validate -->|Verify Fields| Validate
+    Validate -->|Check Not Empty| Validate
+    
+    Validate -->|Yes - Continue| CheckProject
+    Validate -->|No - Error| Response
+    
+    CheckProject -->|Query Project| Proj_DB
+    CheckProject -->|Query Members| ProjMem_DB
+    Proj_DB -->|Project Exists?| CheckProject
+    ProjMem_DB -->|User is Member?| CheckProject
+    
+    CheckProject -->|Yes - Continue| CheckAssignee
+    CheckProject -->|No - Unauthorized| Response
+    
+    CheckAssignee -->|Query User| UserDB
+    CheckAssignee -->|In Project?| ProjMem_DB
+    UserDB -->|User Exists?| CheckAssignee
+    
+    CheckAssignee -->|Yes - Continue| GenerateID
+    CheckAssignee -->|No - Invalid| Response
+    
+    GenerateID -->|Create UUID| GenerateID
+    GenerateID -->|Create Task Object| Store
+    
+    Store -->|Insert Record| Task_DB
+    Store -->|Success?| TriggerEvent
+    Store -->|No - DB Error| Response
+    
+    TriggerEvent -->|Emit Event| Inngest
+    TriggerEvent -->|Check GitHub Link| GitHub
+    TriggerEvent -->|Send OK| Response
+    
+    Response -->|Task ID + Data| User
+    Response -->|Error Message| User
+```
+
+---
+
+## DFD Level 3 - Update Task Status (Detailed - Process 4.3)
+
+```mermaid
+graph TB
+    User["👤 User"]
+    
+    subgraph UpdateTaskDetailed["4.3 Update Task - Detailed Flow"]
+        Validate["4.3.1 Validate Task ID"]
+        CheckAccess["4.3.2 Check Access Rights"]
+        GetCurrent["4.3.3 Get Current State"]
+        Validate_New["4.3.4 Validate New State"]
+        UpdateDB["4.3.5 Update Database"]
+        SyncGitHub["4.3.6 Sync GitHub"]
+        TriggerEvent["4.3.7 Trigger Event"]
+        Response["4.3.8 Send Response"]
+    end
+    
+    subgraph DataAccess["💾 Data Access"]
+        Task_DB["D4: Tasks"]
+        Proj_DB["D3: Projects"]
+        ProjMem_DB["D3.1: Project Members"]
+        GitHub_DB["D6: GitHub Integration"]
+    end
+    
+    Inngest["⚡ Inngest Events"]
+    GitHub["🐙 GitHub API"]
+    
+    User -->|Task ID, New Status| Validate
+    Validate -->|Format Check| Validate
+    
+    Validate -->|Valid| CheckAccess
+    Validate -->|Invalid| Response
+    
+    CheckAccess -->|Query Task| Task_DB
+    CheckAccess -->|Get Project| Proj_DB
+    CheckAccess -->|Check Membership| ProjMem_DB
+    
+    CheckAccess -->|Authorized| GetCurrent
+    CheckAccess -->|Unauthorized| Response
+    
+    GetCurrent -->|Query Task| Task_DB
+    Task_DB -->|Return Task Data| GetCurrent
+    
+    GetCurrent -->|Return Current| Validate_New
+    Validate_New -->|Check Status Valid| Validate_New
+    Validate_New -->|Check Transition| Validate_New
+    
+    Validate_New -->|Valid| UpdateDB
+    Validate_New -->|Invalid| Response
+    
+    UpdateDB -->|Update Status| Task_DB
+    UpdateDB -->|Success?| SyncGitHub
+    UpdateDB -->|No - Error| Response
+    
+    SyncGitHub -->|Has GitHub Link?| GitHub_DB
+    GitHub_DB -->|Get Token| SyncGitHub
+    SyncGitHub -->|Update GitHub Issue| GitHub
+    GitHub -->|Confirm| SyncGitHub
+    
+    SyncGitHub -->|Emit Event| TriggerEvent
+    TriggerEvent -->|Inngest| Inngest
+    TriggerEvent -->|Continue| Response
+    
+    Response -->|Updated Task| User
+    Response -->|Error Message| User
+```
+
+---
+
+## DFD Level 3 - GitHub Webhook Processing (Detailed - Process 6.4)
+
+```mermaid
+graph TB
+    GitHub["🐙 GitHub Webhook"]
+    
+    subgraph WebhookDetailed["6.4 Handle Webhook - Detailed"]
+        Receive["6.4.1 Receive Webhook"]
+        Verify["6.4.2 Verify Signature"]
+        Parse["6.4.3 Parse Payload"]
+        Route["6.4.4 Route Event"]
+        UpdateTask["6.4.5 Update Task"]
+        Sync_DB["6.4.6 Sync to DB"]
+        Response["6.4.7 Send Response"]
+    end
+    
+    subgraph DataAccess["💾 Data Access"]
+        GitHub_DB["D6: GitHub Integration"]
+        Task_DB["D4: Tasks"]
+    end
+    
+    Inngest["⚡ Inngest Events"]
+    
+    GitHub -->|Raw Payload| Receive
+    Receive -->|X-Hub-Signature| Verify
+    
+    Verify -->|Query Config| GitHub_DB
+    Verify -->|Get Secret| GitHub_DB
+    GitHub_DB -->|Secret| Verify
+    
+    Verify -->|Compute HMAC| Verify
+    Verify -->|Match?| Verify
+    
+    Verify -->|Yes - Valid| Parse
+    Verify -->|No - Invalid| Response
+    
+    Parse -->|Extract Event| Parse
+    Parse -->|Extract Action| Parse
+    Parse -->|Extract Issue Data| Parse
+    
+    Parse -->|Issue Event?| Route
+    Parse -->|PR Event?| Route
+    Parse -->|Push Event?| Route
+    
+    Route -->|Issue Opened/Closed| UpdateTask
+    Route -->|Issue Edited| UpdateTask
+    Route -->|Other| Response
+    
+    UpdateTask -->|Query Task| Task_DB
+    UpdateTask -->|GitHub URL Match| Task_DB
+    Task_DB -->|Find Task| UpdateTask
+    
+    UpdateTask -->|Map Status| UpdateTask
+    UpdateTask -->|Map Priority| UpdateTask
+    
+    UpdateTask -->|Update Record| Sync_DB
+    Sync_DB -->|Update Task_DB| Task_DB
+    
+    Sync_DB -->|Emit Event| Inngest
+    Inngest -->|Task Updated| Inngest
+    
+    Inngest -->|OK| Response
+    Response -->|200 Success| GitHub
+```
+
+---
+
+## DFD Legend
+
+| Symbol | Meaning |
+|--------|---------|
+| Rounded Box | External System or User |
+| Rectangle | Process |
+| Cylinder | Data Store |
+| Arrow | Data Flow |
+| D1, D2, etc | Data Store Reference |
+
+## Key Entities
+
+### Processes
+- **1.0**: User Authentication & Profile
+- **2.0**: Workspace Management
+- **3.0**: Project Management
+- **4.0**: Task Management
+- **5.0**: Comment Management
+- **6.0**: GitHub Integration
+
+### Data Stores
+- **D1**: Users (with profile metadata)
+- **D2**: Workspaces
+- **D3**: Projects & Project Members
+- **D4**: Tasks
+- **D5**: Comments
+- **D6**: GitHub Integration & OAuth States
+
+### External Systems
+- **Clerk**: Authentication service
+- **GitHub**: Issue tracking & webhooks
+- **Inngest**: Event processing
+- **Email**: Notification service
+- **PostgreSQL**: Main database
+
+## Data Flows Summary
+
+1. **Authentication Flow**: User → Clerk → System
+2. **Workspace Flow**: User → Create/Manage Workspaces → Members
+3. **Project Flow**: Workspace → Projects → Members → Tasks
+4. **Task Flow**: Create → Assign → Update Status → GitHub Sync
+5. **Comment Flow**: Task → Comments → Notifications
+6. **GitHub Flow**: OAuth → Connect → Webhook Events → Task Updates
