@@ -1,4 +1,4 @@
-## 3. Data Flow Diagram - Level 0 (Context)
+## 1. Data Flow Diagram - Level 0 (Context)
 
 ```mermaid
 graph LR
@@ -24,7 +24,7 @@ graph LR
 
 ---
 
-## 4. Data Flow Diagram - Level 1 (Functional)
+## 2. Data Flow Diagram - Level 1 (Functional)
 
 ```mermaid
 graph LR
@@ -94,7 +94,7 @@ graph LR
 
 ---
 
-## 5. Data Flow Diagram - Level 2 (Detailed: GitHub Integration + Project Management)
+## 3. Data Flow Diagram - Level 2 (Detailed: GitHub Integration + Project Management)
 
 ```mermaid
 graph TD
@@ -168,4 +168,92 @@ graph TD
     style WebhookEventHandler fill:#f0e6ff,stroke:#7c3aed,stroke-width:2px
     style TaskSyncLogic fill:#e6ffe6,stroke:#22c55e,stroke-width:2px
     style NotificationDataStore fill:#fff9e6,stroke:#f59e0b,stroke-width:2px
+```
+
+
+## 4. Three-Tier Client-Server Architecture
+
+```mermaid
+graph TB
+    subgraph "Presentation Tier"
+        Browser["Web Browser"]
+        UI["React UI Components<br/>Vite + Tailwind CSS"]
+        State["Redux State<br/>Management"]
+        Router["React Router<br/>Navigation"]
+    end
+
+    subgraph "Application Tier"
+        Gateway["API Gateway<br/>Express.js"]
+        Auth["Authentication<br/>Clerk OAuth"]
+        WS["WebSocket Server<br/>Real-time Updates"]
+        
+        subgraph "Controllers"
+            WC["Workspace<br/>Controller"]
+            PC["Project<br/>Controller"]
+            TC["Task<br/>Controller"]
+            CC["Comment<br/>Controller"]
+            GC["GitHub<br/>Controller"]
+        end
+        
+        subgraph "Services"
+            WS_Service["Workspace<br/>Service"]
+            PS["Project<br/>Service"]
+            TS["Task<br/>Service"]
+            GHS["GitHub<br/>Service"]
+        end
+    end
+
+    subgraph "Data Tier"
+        ORM["Prisma ORM<br/>Data Access"]
+        Cache["Redis Cache<br/>Session Store"]
+        DB["PostgreSQL<br/>Neon Database"]
+        Queue["Inngest<br/>Job Queue"]
+    end
+
+    subgraph "External Services"
+        GitHub["GitHub API"]
+        Email["Nodemailer<br/>SMTP"]
+    end
+
+    Browser --> UI
+    UI --> State
+    State --> Router
+    Router -->|API Calls| Gateway
+    Browser -->|WebSocket| WS
+    
+    Gateway --> Auth
+    Gateway --> WC
+    Gateway --> PC
+    Gateway --> TC
+    Gateway --> CC
+    Gateway --> GC
+    
+    WC --> WS_Service
+    PC --> PS
+    TC --> TS
+    GC --> GHS
+    
+    WS_Service --> ORM
+    PS --> ORM
+    TS --> ORM
+    GHS --> ORM
+    
+    ORM --> Cache
+    ORM --> DB
+    
+    TS -->|Emit Events| Queue
+    Queue --> Email
+    Queue --> ORM
+    
+    GHS --> GitHub
+    GitHub -->|Webhooks| Gateway
+
+    style Browser fill:#e8f4f8,stroke:#333
+    style UI fill:#61dafb,color:#000,stroke:#333
+    style State fill:#764abc,color:#fff,stroke:#333
+    style Gateway fill:#90c53f,color:#fff,stroke:#333
+    style Auth fill:#1f3a93,color:#fff,stroke:#333
+    style ORM fill:#5b4b8a,color:#fff,stroke:#333
+    style DB fill:#0066ff,color:#fff,stroke:#333
+    style Queue fill:#ed8936,color:#fff,stroke:#333
 ```
